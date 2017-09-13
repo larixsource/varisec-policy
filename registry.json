@@ -1,0 +1,19 @@
+{
+  "id": "larix-plugin-registry",
+  "name": "Larix apiman Plugins",
+  "description": "This plugin registry lists apiman plugins developed by Larix.",
+  "version": "1.0.0-SNAPSHOT",
+  "repository": {
+    "name": "Larix Repo",
+    "url": "https://packagecloud.io/Larix/repo/"
+  },
+  "plugins": [
+    {
+      "groupId": "cl.larix",
+      "artifactId": "varisec-policy",
+      "version": "1.0.0-SNAPSHOT",
+      "name": "Vari Security Policy Plugin",
+      "description": "Plugin to enforce Vari security policy."
+    }
+  ]
+}
