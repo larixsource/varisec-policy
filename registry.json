@@ -4,8 +4,8 @@
   "description": "This plugin registry lists apiman plugins developed by Larix.",
   "version": "1.0.0-SNAPSHOT",
   "repository": {
-    "name": "Larix Repo",
-    "url": "https://packagecloud.io/Larix/repo/"
+    "name": "Larix-repo",
+    "url": "https://packagecloud.io/Larix/repo/maven2"
   },
   "plugins": [
     {
