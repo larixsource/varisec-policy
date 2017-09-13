@@ -1,0 +1,6 @@
+{
+  "frameworkVersion": 1.0,
+  "name": "Vari Security Policy Plugin",
+  "description": "Plugin to enforce Vari security policy.",
+  "version": "${project.version}"
+}

@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>cl.larix</groupId>
+    <artifactId>varisec-policy</artifactId>
+    <packaging>war</packaging>
+    <name>varisec-policy</name>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <properties>
+        <!-- Instruct the build to use only UTF-8 encoding for source code -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
+        <version.apiman>1.3.1.Final</version.apiman>
+        <version.war.plugin>2.5</version.war.plugin>
+    </properties>
+
+    <dependencies>
+        <!-- apiman dependencies (must be excluded from the WAR) -->
+        <dependency>
+            <groupId>io.apiman</groupId>
+            <artifactId>apiman-gateway-engine-beans</artifactId>
+            <version>${version.apiman}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.apiman</groupId>
+            <artifactId>apiman-gateway-engine-core</artifactId>
+            <version>${version.apiman}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${version.war.plugin}</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <webResources>
+                        <resource>
+                            <directory>src/main/apiman</directory>
+                            <targetPath>META-INF/apiman</targetPath>
+                            <filtering>true</filtering>
+                        </resource>
+                    </webResources>
+                </configuration>
+            </plugin>
+        </plugins>
+        <extensions>
+            <extension>
+                <groupId>io.packagecloud.maven.wagon</groupId>
+                <artifactId>maven-packagecloud-wagon</artifactId>
+                <version>0.0.6</version>
+            </extension>
+        </extensions>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>packagecloud-Larix</id>
+            <url>packagecloud+https://packagecloud.io/Larix/repo</url>
+        </repository>
+        <snapshotRepository>
+            <id>packagecloud-Larix</id>
+            <url>packagecloud+https://packagecloud.io/Larix/repo</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

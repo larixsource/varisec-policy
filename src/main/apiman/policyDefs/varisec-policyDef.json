@@ -1,0 +1,7 @@
+{
+  "id": "varisec-policy",
+  "name": "Vari Security Policy",
+  "description": "A policy to enforce Vari security policy.",
+  "policyImpl": "plugin:${project.groupId}:${project.artifactId}:${project.version}:${project.packaging}/cl.larix.varisec.SecurityPolicy",
+  "icon": "fire"
+}
