@@ -10,6 +10,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Map;
 
+import static cl.larix.varisec.SecurityPolicy.*;
+
 @TestingPolicy(SecurityPolicy.class)
 @Configuration("{}")
 public class SecurityPolicyTest extends ApimanPolicyTest {
@@ -26,15 +28,15 @@ public class SecurityPolicyTest extends ApimanPolicyTest {
 
         Map<String, String> headers = echo.getHeaders();
 
-        Assert.assertEquals("ee738963-eafb-4566-8f01-3bbd4d2bdd9b", headers.get("X-Vari-IDPUserId"));
-        Assert.assertEquals("1", headers.get("X-Vari-UserId"));
-        Assert.assertEquals("*", headers.get("X-Vari-Organization"));
+        Assert.assertEquals("ee738963-eafb-4566-8f01-3bbd4d2bdd9b", headers.get(VARI_IDPUSER_ID_HEADER));
+        Assert.assertEquals("1", headers.get(VARI_USER_ID_HEADER));
+        Assert.assertEquals("*", headers.get(VARI_ORGANIZATIONS_HEADER));
 
-        String[] roles = headers.get("X-Vari-Role").split(",");
+        String[] roles = headers.get(VARI_ROLES_HEADER).split(",");
         Assert.assertTrue(Arrays.stream(roles).anyMatch(role -> role.equals("admin")));
         Assert.assertTrue(Arrays.stream(roles).anyMatch(role -> role.equals("uma_authorization")));
 
-        Assert.assertFalse(headers.containsKey("Authorization"));
+        Assert.assertFalse(headers.containsKey(AUTHORIZATION));
     }
 
     @Test
@@ -48,15 +50,15 @@ public class SecurityPolicyTest extends ApimanPolicyTest {
 
         Map<String, String> headers = echo.getHeaders();
 
-        Assert.assertEquals("f7cef67c-41f9-4f8d-b917-dda2fca53de8", headers.get("X-Vari-IDPUserId"));
-        Assert.assertEquals("5", headers.get("X-Vari-UserId"));
-        Assert.assertEquals("2", headers.get("X-Vari-Organization"));
+        Assert.assertEquals("f7cef67c-41f9-4f8d-b917-dda2fca53de8", headers.get(VARI_IDPUSER_ID_HEADER));
+        Assert.assertEquals("5", headers.get(VARI_USER_ID_HEADER));
+        Assert.assertEquals("2", headers.get(VARI_ORGANIZATIONS_HEADER));
 
-        String[] roles = headers.get("X-Vari-Role").split(",");
+        String[] roles = headers.get(VARI_ROLES_HEADER).split(",");
         Assert.assertTrue(Arrays.stream(roles).anyMatch(role -> role.equals("user")));
         Assert.assertTrue(Arrays.stream(roles).anyMatch(role -> role.equals("uma_authorization")));
 
-        Assert.assertFalse(headers.containsKey("Authorization"));
+        Assert.assertFalse(headers.containsKey(AUTHORIZATION));
     }
 
     @Test

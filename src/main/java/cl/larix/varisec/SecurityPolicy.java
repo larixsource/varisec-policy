@@ -27,6 +27,11 @@ public class SecurityPolicy implements IPolicy {
     private static final int AUTH_NOT_PROVIDED = 12005;
     private static final int MISSING_CLAIM = 12009;
 
+    static final String VARI_USER_ID_HEADER = "X-Vari-UserId";
+    static final String VARI_IDPUSER_ID_HEADER = "X-Vari-IDPUserId";
+    static final String VARI_ROLES_HEADER = "X-Vari-Roles";
+    static final String VARI_ORGANIZATIONS_HEADER = "X-Vari-Organizations";
+
     public SecurityPolicy() {
     }
 
@@ -38,6 +43,7 @@ public class SecurityPolicy implements IPolicy {
     @Override
     public void apply(ApiRequest request, IPolicyContext context, Object config,
                       IPolicyChain<ApiRequest> chain) {
+        // get token from Authorization header
         String jwt = Optional.ofNullable(request.getHeaders().get(AUTHORIZATION_KEY))
                 // If seems to be bearer token
                 .filter(e -> e.toLowerCase().startsWith(BEARER))
@@ -45,7 +51,6 @@ public class SecurityPolicy implements IPolicy {
                 .map(e -> e.substring(BEARER.length(), e.length()))
                 // Otherwise attempt to get from the access_token query param
                 .orElse(request.getQueryParams().get(ACCESS_TOKEN_QUERY_KEY));
-
         if (jwt == null) {
             PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authentication,
                     AUTH_NOT_PROVIDED, "");
@@ -54,64 +59,65 @@ public class SecurityPolicy implements IPolicy {
             return;
         }
 
-        VariJWTClaims variClaims = VariJWTUtil.parse(jwt);
+        VariJWTClaims variClaims = VariJWTClaims.parse(jwt);
 
+        // set X-Vari-UserId header with vari_user_id claim
         Optional<Integer> userId = variClaims.getUserId();
-        if (userId.isPresent()) {
-            userId.ifPresent(value -> request.getHeaders().put("X-Vari-UserId", Integer.toString(value)));
-        } else {
+        if (!userId.isPresent()) {
             PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authentication,
                     MISSING_CLAIM, "Missing vari_user_id from token");
             pf.setResponseCode(HTTP_UNAUTHORIZED);
             chain.doFailure(pf);
             return;
         }
+        userId.ifPresent(value -> request.getHeaders().put(VARI_USER_ID_HEADER, Integer.toString(value)));
 
+        // set X-Vari-IDPUserId header with sub claim
         Optional<String> idpUserId = variClaims.getIdpUserId();
-        if (idpUserId.isPresent()) {
-            idpUserId.ifPresent(value -> request.getHeaders().put("X-Vari-IDPUserId", value));
-        } else {
+        if (!idpUserId.isPresent()) {
             PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authentication,
                     MISSING_CLAIM, "Missing sub from token");
             pf.setResponseCode(HTTP_UNAUTHORIZED);
             chain.doFailure(pf);
             return;
         }
+        idpUserId.ifPresent(value -> request.getHeaders().put(VARI_IDPUSER_ID_HEADER, value));
 
-        if (!variClaims.getRoles().isEmpty()) {
-            // FIXME? request.getHeaders().add(key, value) doesn't work as expected, the final request contains only one
-            // header X-Vari-Role and no multiple ones, so we'll pass only one X-Vari-Role with the roles separated by comma.
-            String roles = String.join(",", variClaims.getRoles());
-            request.getHeaders().put("X-Vari-Role", roles);
-        } else {
+        // set X-Vari-Roles header with realm_access.roles claim
+        if (variClaims.getRoles().isEmpty()) {
             PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authentication,
                     MISSING_CLAIM, "Missing realm_access.roles from token");
             pf.setResponseCode(HTTP_UNAUTHORIZED);
             chain.doFailure(pf);
             return;
         }
+        // FIXME? request.getHeaders().add(key, value) doesn't work as expected, the final request contains only one
+        // header X-Vari-Roles and no multiple ones, so we'll pass only one X-Vari-Roles with the roles separated by
+        // comma.
+        String roles = String.join(",", variClaims.getRoles());
+        request.getHeaders().put(VARI_ROLES_HEADER, roles);
 
-        if (!variClaims.getOrganizations().isEmpty()) {
-            if (variClaims.getOrganizations().contains(0)) {
-                request.getHeaders().put("X-Vari-Organization", "*");
-            } else {
-                // FIXME? request.getHeaders().add(key, value) doesn't work as expected, the final request contains only
-                // one header X-Vari-Organization and no multiple ones, so we'll pass only one X-Vari-Role with the
-                // organizations separated by comma.
-                String organizations = variClaims.getOrganizations()
-                        .stream().map(id -> Integer.toString(id)).collect(Collectors.joining(","));
-                request.getHeaders().put("X-Vari-Organization", organizations);
-            }
-        } else {
+        // set X-Vari-Organizations header with vari_organization_id claim
+        if (variClaims.getOrganizations().isEmpty()) {
             PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authentication,
                     MISSING_CLAIM, "Missing vari_organization_id from token");
             pf.setResponseCode(HTTP_UNAUTHORIZED);
             chain.doFailure(pf);
             return;
         }
+        if (variClaims.getOrganizations().contains(0)) {
+            request.getHeaders().put(VARI_ORGANIZATIONS_HEADER, "*");
+        } else {
+            // FIXME? request.getHeaders().add(key, value) doesn't work as expected, the final request contains only
+            // one header X-Vari-Organization and no multiple ones, so we'll pass only one X-Vari-Role with the
+            // organizations separated by comma.
+            String organizations = variClaims.getOrganizations()
+                    .stream().map(id -> Integer.toString(id)).collect(Collectors.joining(","));
+            request.getHeaders().put(VARI_ORGANIZATIONS_HEADER, organizations);
+        }
 
         // our services won't require this
-        request.getHeaders().remove("Authorization");
+        request.getHeaders().remove(AUTHORIZATION_KEY);
 
         chain.doApply(request);
     }
