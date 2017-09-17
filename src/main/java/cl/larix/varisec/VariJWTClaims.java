@@ -91,6 +91,7 @@ class VariJWTClaims {
         final VariJWTClaims variClaims = new VariJWTClaims();
 
         SigningKeyResolver keyResolver = new SigningKeyResolver() {
+            @SuppressWarnings("unchecked")
             @Override
             public Key resolveSigningKey(JwsHeader jwsHeader, Claims claims) {
                 try {

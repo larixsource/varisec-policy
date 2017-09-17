@@ -10,6 +10,7 @@ import io.apiman.gateway.engine.policy.IPolicy;
 import io.apiman.gateway.engine.policy.IPolicyChain;
 import io.apiman.gateway.engine.policy.IPolicyContext;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -19,18 +20,23 @@ import java.util.stream.Collectors;
  * @author Jorge Riquelme (jorge@larix.cl)
  */
 public class SecurityPolicy implements IPolicy {
-
-    private static final String AUTHORIZATION_KEY = "Authorization";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String ACCESS_TOKEN_QUERY_KEY = "access_token";
     private static final String BEARER = "bearer ";
+
+    private static final int HTTP_BAD_REQUEST = 400;
     private static final int HTTP_UNAUTHORIZED = 401;
+
     private static final int AUTH_NOT_PROVIDED = 12005;
     private static final int MISSING_CLAIM = 12009;
+    private static final int BAD_ORGANIZATION_PARAMETER = 12009;
+    private static final int UNKNOWN_ORGANIZATION = 12009;
 
-    static final String VARI_USER_ID_HEADER = "X-Vari-UserId";
-    static final String VARI_IDPUSER_ID_HEADER = "X-Vari-IDPUserId";
-    static final String VARI_ROLES_HEADER = "X-Vari-Roles";
-    static final String VARI_ORGANIZATIONS_HEADER = "X-Vari-Organizations";
+    private static final String VARI_USER_ID_HEADER = "X-Vari-UserId";
+    private static final String VARI_IDPUSER_ID_HEADER = "X-Vari-IDPUserId";
+    private static final String VARI_ROLES_HEADER = "X-Vari-Roles";
+    private static final String VARI_ORGANIZATIONS_HEADER = "X-Vari-Organizations";
+    private static final String ORG_QUERY_PARAM = "org";
 
     public SecurityPolicy() {
     }
@@ -44,7 +50,7 @@ public class SecurityPolicy implements IPolicy {
     public void apply(ApiRequest request, IPolicyContext context, Object config,
                       IPolicyChain<ApiRequest> chain) {
         // get token from Authorization header
-        String jwt = Optional.ofNullable(request.getHeaders().get(AUTHORIZATION_KEY))
+        String jwt = Optional.ofNullable(request.getHeaders().get(AUTHORIZATION_HEADER))
                 // If seems to be bearer token
                 .filter(e -> e.toLowerCase().startsWith(BEARER))
                 // Get out token value
@@ -114,10 +120,38 @@ public class SecurityPolicy implements IPolicy {
             String organizations = variClaims.getOrganizations()
                     .stream().map(id -> Integer.toString(id)).collect(Collectors.joining(","));
             request.getHeaders().put(VARI_ORGANIZATIONS_HEADER, organizations);
+
+            // if and org id is provided as parameter, check it against vari_organization_id
+            if (request.getQueryParams().containsKey(ORG_QUERY_PARAM)) {
+                List<String> orgs = request.getQueryParams().getAll(ORG_QUERY_PARAM);
+                if (orgs.size() > 1) {
+                    PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Other,
+                            BAD_ORGANIZATION_PARAMETER, "At most one org query parameter can be used");
+                    pf.setResponseCode(HTTP_BAD_REQUEST);
+                    chain.doFailure(pf);
+                    return;
+                }
+                try {
+                    int orgId = Integer.parseInt(orgs.get(0));
+                    if (!variClaims.getOrganizations().contains(orgId)) {
+                        PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Authorization,
+                                UNKNOWN_ORGANIZATION, "Unknown organization");
+                        pf.setResponseCode(HTTP_UNAUTHORIZED);
+                        chain.doFailure(pf);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    PolicyFailure pf = getFailureFactory(context).createFailure(PolicyFailureType.Other,
+                            BAD_ORGANIZATION_PARAMETER, "Invalid org parameter value");
+                    pf.setResponseCode(HTTP_BAD_REQUEST);
+                    chain.doFailure(pf);
+                    return;
+                }
+            }
         }
 
         // our services won't require this
-        request.getHeaders().remove(AUTHORIZATION_KEY);
+        request.getHeaders().remove(AUTHORIZATION_HEADER);
 
         chain.doApply(request);
     }
